@@ -6,10 +6,10 @@
 >
 > `make verify` sẽ fail nếu còn placeholder chưa điền. Đó là cố ý.
 
-**Họ Tên:** _<Họ Tên>_
-**MSSV:** _<MSSV>_
-**Cohort:** _<A20-K1 / A20-K2 / ...>_
-**Ngày submit:** _<YYYY-MM-DD>_
+**Họ Tên:** THIỀU QUANG VINH
+**MSSV:** 2A202602877
+**Cohort:** A20-K4
+**Ngày submit:** 2026-10-06
 
 ---
 
@@ -17,23 +17,20 @@
 
 > Từ `make probe`. Paste output hoặc điền tay.
 
-- **OS:** _<macOS 14 / Windows 11 / Ubuntu 24.04 / ...>_
-- **CPU:** _<Apple M2 / Intel i7-12700H / AMD Ryzen 7 5800H>_
-- **Cores:** _<physical / logical>_
-- **CPU extensions:** _<AVX2 / AVX-512 / NEON / —>_
-- **RAM:** _<GB>_
-- **Accelerator:** _<NVIDIA RTX 4060 / Apple Metal / Vulkan / CPU only>_
-- **llama.cpp asset đã tải:** _<vd: llama-b10488-bin-macos-arm64.tar.gz>_
-- **Model đã dùng:** _<Gemma 4 E2B / Qwen3.5 0.8B>_ (`LAB_MODEL=`_<gemma4-e2b / qwen35-0.8b>_)
-- **Quantization:** _<primary>_ + _<compare>_ (từ `models/active.json`)
+- **OS:** Windows 11 (WSL2 Ubuntu 24.04 LTS / Linux 6.18)
+- **CPU:** 12th Gen Intel(R) Core(TM) i7-12650H
+- **Cores:** 8 physical / 16 logical
+- **CPU extensions:** AVX2
+- **RAM:** 11.5 GB
+- **Accelerator:** NVIDIA GeForce RTX 3070 Laptop GPU, 8192 MiB (baseline chạy CPU-only, ngl: 0)
+- **llama.cpp asset đã tải:** llama-b10488-bin-ubuntu-vulkan-x64.tar.gz
+- **Model đã dùng:** Qwen3.5 0.8B (`LAB_MODEL=qwen35-0.8b`)
+- **Quantization:** Q4_K_M + UD-Q2_K_XL (từ `models/active.json`)
 
-**Chạy ở đâu:** _<laptop của tôi / Colab / Kaggle>_
+**Chạy ở đâu:** Laptop cá nhân (WSL2 Ubuntu)
 _(Nếu dùng cloud fallback: nói rõ vì sao — RAM < 8 GB, setup fail, v.v. Không mất điểm.)_
 
-**Setup story** (≤ 80 chữ): điều gì cần thay đổi để lab chạy trên máy bạn? Có bước
-nào fail rồi phải workaround không?
-
-_Answer here._
+**Setup story** (≤ 80 chữ): Khi chạy `make bench`, `llama-server` bị crash với mã lỗi 127 do thiếu thư viện OpenMP: `error while loading shared libraries: libgomp.so.1: cannot open shared object file`. Đã khắc phục bằng cách cài gói qua `sudo apt install -y libgomp1`. Sau đó server khởi động và benchmark bình thường.
 
 ---
 
@@ -43,14 +40,10 @@ _Answer here._
 
 | Quantization | Size (GB) | Load (ms) | TTFT P50/P95 (ms) | TPOT P50/P95 (ms) | E2E P50/P95/P99 (ms) | Decode (tok/s) |
 |---|--:|--:|--:|--:|--:|--:|
-| UD-Q4_K_XL | | | | | | |
-| UD-Q2_K_XL | | | | | | |
+| Q4_K_M | 0.50 | 2138 | 178 / 188 | 20.9 / 21.2 | 1496 / 1518 / 1518 | 47.8 |
+| UD-Q2_K_XL | 0.39 | 2084 | 219 / 249 | 20.3 / 20.6 | 1495 / 1518 / 1518 | 49.3 |
 
-**Quan sát** (≤ 60 chữ): 2-bit nhanh hơn bao nhiêu, và **có đáng không**? Bạn đã thử
-hỏi cùng một câu trên cả hai (`make serve` vs `.venv/bin/python labs/02-serve/serve.py --compare`)
-chưa? Chất lượng khác nhau thế nào?
-
-_Answer here._
+**Quan sát** (≤ 60 chữ): 2-bit decode nhanh hơn 1.03x (49.3 vs 47.8 tok/s) và nhẹ hơn 0.11 GB, nhưng prefill (TTFT) chậm hơn ~1.3x (219 vs 178 ms). Khi hỏi cùng câu hỏi ở lượt 2, bản 2-bit trả lời cụt lủn (26 tokens) và bị hallucinated so với câu trả lời đầy đủ của bản 4-bit (86 tokens). Không đáng đánh đổi.
 
 ---
 
@@ -60,22 +53,17 @@ _Answer here._
 
 | Users | RPS | P50 (ms) | P95 (ms) | P99 (ms) | Eff. concurrency | Failures |
 |--:|--:|--:|--:|--:|--:|--:|
-| 10 | | | | | | |
-| 50 | | | | | | |
+| 10 | 1.06 | 8300 | 12000 | 13000 | 8.6 | 0.0% |
+| 50 | 1.28 | 28000 | 41000 | 42000 | 33.3 | 0.0% |
 
-- **Offered load tăng 5×, throughput thực tăng:** _<X.XX>×_
-- **P95 tăng:** _<X.XX>×_
-- **Effective concurrency ở 50 users:** _<số>_ so với `--parallel` = _<số>_ slots
+- **Offered load tăng 5×, throughput thực tăng:** 1.20×
+- **P95 tăng:** 3.42×
+- **Effective concurrency ở 50 users:** 33.3 so với `--parallel` = 4 slots
 
 **Peak `llamacpp:n_busy_slots_per_decode`** (từ `make metrics` khi `make load-50` đang
-chạy): _<số>_ / _<slots>_ slots
+chạy): 3.93 / 4 slots
 
-**Saturation reading** (≤ 80 chữ): server của bạn bão hoà ở đâu, và **bằng chứng nào**
-thuyết phục bạn? Nếu P95 tăng nhanh hơn RPS thì phần latency thêm đó là queue time hay
-compute time — bạn biết bằng cách nào? Nếu bạn phải nâng goodput@SLO, bạn sẽ đổi knob
-nào **trước**, và vì sao knob đó?
-
-_Answer here._
+**Saturation reading** (≤ 80 chữ): Server bão hòa ở mức ≤ 50 users: tải tăng 5x nhưng RPS chỉ tăng 1.20x, trong khi P95 bùng nổ 3.42x (12s -> 41s). Độ trễ tăng thêm là queue time vì effective concurrency đạt 33.3 (gấp 8.32x số 4 slot) và deferred=46. Để nâng goodput@SLO (P95 ≤ 15s), đổi -ngl bật GPU offload trước để tăng tốc giải phóng slot.
 
 ---
 
@@ -85,23 +73,20 @@ _Answer here._
 
 | Day | Piece | Real hay stub? |
 |---|---|---|
-| N16 Cloud/IaC | | |
-| N17 Data pipeline | | |
-| N18 Lakehouse | | |
-| N19 Vector + features | | |
+| N16 Cloud/IaC | Cloud infrastructure / IaC | stub |
+| N17 Data pipeline | Data ingestion / ETL | stub |
+| N18 Lakehouse | Storage / Lakehouse table | stub |
+| N19 Vector + features | Vector search / Embeddings | stub |
 | N20 Serving | `llama-server` | real |
 
 **Latency split** (mean của 3 query, từ output của `pipeline.py`):
 
-- embed: _<ms>_
-- retrieve: _<ms>_
-- llm: _<ms>_
-- **stage chiếm nhiều nhất:** _<stage>_ (_<%>_ của total)
+- embed: 0.0 ms
+- retrieve: 0.0 ms
+- llm: 3059.8 ms
+- **stage chiếm nhiều nhất:** llm (100% của total)
 
-**Reflection** (≤ 60 chữ): bottleneck ở đâu? Có khớp với kỳ vọng của bạn không? Nếu
-phải giảm latency của pipeline này 2×, bạn sẽ tấn công vào đâu?
-
-_Answer here._
+**Reflection** (≤ 60 chữ): Bottleneck hoàn toàn ở LLM (3059.8 ms) do embed/retrieve dùng keyword overlap in-memory (0.0 ms), đúng như kỳ vọng. Để giảm latency pipeline 2x, cần tấn công vào LLM bằng cách bật GPU offload (-ngl 99) để tăng tốc decode và siết max_tokens ngắn gọn hơn.
 
 ---
 
@@ -111,22 +96,19 @@ _Answer here._
 > một before/after thật (`benchmarks/01-tuning-tg128.md`). Đổi quantization,
 > `LAB_N_CTX`, hay `--parallel` rồi đo lại cũng được.
 
-**Change:** _<vd: hạ -t từ 16 xuống 8; vd: đổi sang UD-Q2_K_XL; vd: --parallel 4 → 8>_
+**Change:** Hạ số thread từ logical cores (-t 16) về physical cores (-t 8) khi decode CPU (tg128).
 
 ```
-before:  <số + đơn vị>
-after:   <số + đơn vị>
-speedup: <X.Y>×
+before:  21.2 tok/s
+after:   49.9 tok/s
+speedup: 2.35×
 ```
 
 **Tại sao nó work** (1–2 đoạn — đây là phần grader đọc kỹ nhất):
 
-_Giải thích như đang nói với bạn ngồi cạnh. Bám vào **cơ chế**, không phải "vibes":
-memory bandwidth? vector width? cache residency? scheduling? queueing? Nếu kết quả
-**khác** với kỳ vọng từ deck — nói rõ, và giải thích vì sao. Grader thưởng điểm cho
-lập luận đúng về một kết quả bất ngờ, hơn là một con số đẹp không được giải thích._
+Decode (tg128) là memory-bandwidth bound vì mỗi token sinh ra phải nạp lại toàn bộ trọng số mô hình từ RAM vào thanh ghi. Ở 8 physical cores, mỗi core tận dụng tối đa cache L1/L2 và bus bộ nhớ mà không bị tranh chấp, đạt tốc độ đỉnh 49.9 tok/s.
 
-_Answer here._
+Khi nâng lên 16 threads (SMT/hyper-threading), 2 thread ảo trên cùng core tranh chấp kênh bộ nhớ và gây cache thrashing. Đồng thời chi phí chuyển ngữ cảnh (context switching) và đồng bộ hóa barrier giữa các thread tăng vọt, làm hiệu năng sụt giảm nghiêm trọng xuống còn 21.2 tok/s.
 
 ---
 
@@ -135,14 +117,14 @@ _Answer here._
 > Bỏ trống nếu không làm. Xem `docs/bonus/README.md`. Đừng làm hết — **một** finding sâu
 > ăn điểm hơn năm bảng nông.
 
-**Đã làm:** _<B1 build-compare / B2 sweep nào / B4 challenge nào / B5 lựa chọn nào>_
+**Đã làm:** _(để trống nếu bạn không làm phần này)_
 
 **Numbers:**
 
 ```
-before:  <số>
-after:   <số>
-speedup: <X.Y>×
+before:  (để trống nếu không làm)
+after:   (để trống nếu không làm)
+speedup: 1.00×
 ```
 
 **Điều này nói lên gì mà deck chưa nói:**
@@ -153,9 +135,7 @@ _(để trống nếu bạn không làm phần này)_
 
 ## 7. Điều làm bạn ngạc nhiên nhất  *(optional)*
 
-_(1–2 câu. Không bắt buộc, nhưng grader đọc hết.)_
-
-_(để trống nếu bạn không làm phần này)_
+Bản 2-bit tuy tiết kiệm được 0.11 GB dung lượng và decode tương đương, nhưng prefill trên CPU lại chậm hơn do chi phí dequantization quá lớn, và chất lượng sinh câu trả lời ở lượt 2 bị hallucinated và cụt lủn.
 
 ---
 
@@ -185,4 +165,4 @@ xem được → 0 điểm.
 
 ## 9. Khai báo sử dụng AI  *(xem `docs/RULES.md` §3)*
 
-_(Công cụ nào, dùng vào việc gì. Ghi "Không dùng" nếu không dùng.)_
+Sử dụng Antigravity IDE (Gemini) để hỗ trợ phân tích kết quả benchmark, đọc logs và định dạng các bảng số liệu trong báo cáo. Toàn bộ quá trình chạy benchmark, load test và inference phục vụ đều được thực thi trực tiếp trên máy local.
