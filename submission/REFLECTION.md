@@ -117,19 +117,21 @@ Khi nâng lên 16 threads (SMT/hyper-threading), 2 thread ảo trên cùng core 
 > Bỏ trống nếu không làm. Xem `docs/bonus/README.md`. Đừng làm hết — **một** finding sâu
 > ăn điểm hơn năm bảng nông.
 
-**Đã làm:** _(để trống nếu bạn không làm phần này)_
+**Đã làm:** B2 Context-length sweep (`make sweep-ctx`) — Khảo sát sự tăng trưởng phi tuyến của chi phí prefill và TTFT theo chiều dài context trong RAG (`benchmarks/bonus-ctx-len-sweep.md`).
 
 **Numbers:**
 
 ```
-before:  (để trống nếu không làm)
-after:   (để trống nếu không làm)
-speedup: 1.00×
+before:  1084.9 ms (prefill ở 256 tokens, 236.0 tok/s)
+after:   23466.1 ms (prefill ở 4096 tokens, 174.6 tok/s)
+speedup: 0.74× tok/s (thông lượng tụt 26%; độ trễ TTFT tăng 21.6×, vượt 1.35× so với tỷ lệ tuyến tính)
 ```
 
 **Điều này nói lên gì mà deck chưa nói:**
 
-_(để trống nếu bạn không làm phần này)_
+1. **Ranh giới giữa $O(N)$ và $O(N^2)$ trên silicon thật:** Slide bài giảng chỉ ra prefill là compute-bound, nhưng thí nghiệm thực tế cho thấy điểm uốn rõ ràng: ở dải context ngắn (256 tokens), tốc độ prefill đạt tới 236 tok/s do các phép chiếu ma trận tuyến tính $O(N)$ (MLP, Linear projections) chiếm ưu thế. Tuy nhiên, khi tăng dần lên 4096 tokens, thành phần tính toán ma trận Attention bậc hai $O(N^2)$ cùng chi phí ghi/đọc KV cache tăng vọt, kéo tốc độ xử lý xuống chỉ còn 174.6 tok/s. Hệ quả là thời gian prefill bùng nổ lên **23,466 ms (~23.5s)**, gấp **1.35× so với mức tăng tuyến tính lý thuyết**.
+
+2. **Bài học thực chiến cho RAG Serving:** Kỹ sư thường có thói quen nhồi nhét tối đa context chunk vào prompt chỉ vì context window của mô hình cho phép (2048 hoặc 4096 tokens). Thực nghiệm chứng minh cái giá phải trả là TTFT lên tới 23.5 giây — hoàn toàn phá vỡ mọi SLO của người dùng trước khi kịp sinh ra token đầu tiên. Đây chính là động lực kỹ thuật cốt lõi giải thích vì sao các serving engine ở quy mô datacenter phải triển khai kiến trúc **Disaggregated Prefill & Decode**: tách rời cụm chuyên prefill (compute-bound) khỏi cụm decode (bandwidth-bound) để ngăn chặn các truy vấn RAG context dài độc chiếm tài nguyên tính toán và gây starvation cho toàn bộ hệ thống.
 
 ---
 
@@ -141,22 +143,22 @@ Bản 2-bit tuy tiết kiệm được 0.11 GB dung lượng và decode tương 
 
 ## 8. Self-check trước khi push
 
-- [ ] `hardware.json` committed
-- [ ] `models/active.json` committed
-- [ ] `benchmarks/01-quickstart-results.md` committed (`make bench`)
-- [ ] `benchmarks/01-tuning-tg128.md` committed (`make tune`)
-- [ ] `benchmarks/02-server-results.md` committed (`make load-report`)
-- [ ] `benchmarks/02-server-batching-u50.md` hoặc `-metrics-u50.csv` committed (`make metrics`)
-- [ ] `benchmarks/locust-10_stats.csv` + `locust-50_stats.csv` committed (`make load-10` / `load-50`)
-- [ ] `benchmarks/03-integration-results.md` committed (`make pipeline`)
-- [ ] Mọi section **"required — replace this line"** trong các file `benchmarks/*.md`
+- [x] `hardware.json` committed
+- [x] `models/active.json` committed
+- [x] `benchmarks/01-quickstart-results.md` committed (`make bench`)
+- [x] `benchmarks/01-tuning-tg128.md` committed (`make tune`)
+- [x] `benchmarks/02-server-results.md` committed (`make load-report`)
+- [x] `benchmarks/02-server-batching-u50.md` hoặc `-metrics-u50.csv` committed (`make metrics`)
+- [x] `benchmarks/locust-10_stats.csv` + `locust-50_stats.csv` committed (`make load-10` / `load-50`)
+- [x] `benchmarks/03-integration-results.md` committed (`make pipeline`)
+- [x] Mọi section **"required — replace this line"** trong các file `benchmarks/*.md`
       đã được thay bằng nhận xét của bạn
-- [ ] 5 screenshots trong `submission/screenshots/`
-- [ ] `make verify` → **exit 0**
-- [ ] Repo tên đúng mẫu `K4-L3-DAY20-HoVaTen-MSSV-ModelServing` (xem `docs/SUBMISSION.md`)
-- [ ] Repo GitHub ở chế độ **public**
-- [ ] Đã push và paste public URL vào VinUni LMS **trước 23:59 (UTC+7) ngày làm lab**
-- [ ] **Không** commit `models/*.gguf`, `runtime/` hay `.env` (đã có trong `.gitignore`)
+- [x] 5 screenshots trong `submission/screenshots/`
+- [x] `make verify` → **exit 0**
+- [x] Repo tên đúng mẫu `K4-L3-DAY20-HoVaTen-MSSV-ModelServing` (xem `docs/SUBMISSION.md`)
+- [x] Repo GitHub ở chế độ **public**
+- [x] Đã push và paste public URL vào VinUni LMS **trước 23:59 (UTC+7) ngày làm lab**
+- [x] **Không** commit `models/*.gguf`, `runtime/` hay `.env` (đã có trong `.gitignore`)
 
 **Quan trọng:** repo phải **public** đến khi điểm được công bố. Private → grader không
 xem được → 0 điểm.
@@ -165,4 +167,4 @@ xem được → 0 điểm.
 
 ## 9. Khai báo sử dụng AI  *(xem `docs/RULES.md` §3)*
 
-Sử dụng Antigravity IDE (Gemini) để hỗ trợ phân tích kết quả benchmark, đọc logs và định dạng các bảng số liệu trong báo cáo. Toàn bộ quá trình chạy benchmark, load test và inference phục vụ đều được thực thi trực tiếp trên máy local.
+Sử dụng Antigravity IDE (Gemini 3.8 Flash) để hỗ trợ phân tích kết quả benchmark, đọc logs và định dạng các bảng số liệu trong báo cáo. Toàn bộ quá trình chạy benchmark, load test và inference phục vụ đều được thực thi trực tiếp trên máy local.

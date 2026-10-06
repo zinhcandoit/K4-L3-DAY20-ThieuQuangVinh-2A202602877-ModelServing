@@ -1,0 +1,26 @@
+[
+  {
+    "tokens": 256,
+    "pp_tok_s": 236.0,
+    "prefill_ms": 1084.9,
+    "vs_linear": 1.0
+  },
+  {
+    "tokens": 1024,
+    "pp_tok_s": 201.7,
+    "prefill_ms": 5076.6,
+    "vs_linear": 1.17
+  },
+  {
+    "tokens": 2048,
+    "pp_tok_s": 188.8,
+    "prefill_ms": 10847.5,
+    "vs_linear": 1.25
+  },
+  {
+    "tokens": 4096,
+    "pp_tok_s": 174.6,
+    "prefill_ms": 23466.1,
+    "vs_linear": 1.35
+  }
+]
